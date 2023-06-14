@@ -1,0 +1,122 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      ECR_REPO_NAME:
+        required: true
+        type: string
+      INFRASTRUCTURE_REPO:
+        required: true
+        type: string
+      APP_REPO_NAME:
+        required: true
+        type: string
+      ARGO_APP_NAME:
+        required: true
+        type: string
+      ARGO_APPS_SHARING_IMAGE:
+        type: string
+      ARGO_APP_BRANCH:
+        required: true
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+      AWS_ROLE_NAME:
+        type: string
+    secrets:
+      DEPLOY_KEY:
+        required: true
+
+jobs:
+  argocd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out application code
+        uses: actions/checkout@v3
+
+      - name: Git Commit - set IMAGE_ID,IMAGE_TAG,COMMIT_USER_EMAIL
+        run: |-
+          echo "GIT_COMMIT=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+          echo "IMAGE_ID=${{ inputs.AWS_ACCOUNT_ID }}.dkr.ecr.${{ inputs.AWS_REGION }}.amazonaws.com/${{ inputs.ECR_REPO_NAME }}" >> $GITHUB_ENV
+          echo "COMMIT_USER_EMAIL=$(git log --format='%an <%ae>' -n 1 HEAD | cut -d '<' -f 2 | cut -d '>' -f 1)" >> $GITHUB_ENV
+
+      - name: Get environment for build job
+        run: echo "${{ env.COMMIT_USER_EMAIL }} , ${{ env.IMAGE_TAG }} , ${{ env.IMAGE_ID }}"
+
+      - name: Configure aws credentials
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
+          role-session-name: ci-sess
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Push new tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |-
+          aws sts get-caller-identity
+          aws ecr get-login-password --region ${{ inputs.AWS_REGION }} | docker login --username AWS --password-stdin ${{ inputs.AWS_ACCOUNT_ID }}.dkr.ecr.${{ inputs.AWS_REGION }}.amazonaws.com/${{ inputs.ECR_REPO_NAME }}
+          docker pull ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }}
+          docker tag ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} ${{ env.IMAGE_ID }}:${{ github.ref_name}}
+          docker push ${{ env.IMAGE_ID }}:${{ github.ref_name}}
+
+      - name: Setup SSH Keys and known_hosts
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |-
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
+
+      - name: Checkout infra code
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |-
+          rm -rfv /tmp/$(echo ${{ inputs.INFRASTRUCTURE_REPO }} | sed -n 's/^.*\/\(.*\).git$/\1/p') && cd /tmp
+          git clone --recurse-submodules ${{ inputs.INFRASTRUCTURE_REPO }}
+          cd $(echo ${{ inputs.INFRASTRUCTURE_REPO }} | sed -n 's/^.*\/\(.*\).git$/\1/p') && git checkout ${{ inputs.ARGO_APP_BRANCH }} || true
+
+      - name: Deploy
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        shell: bash
+        run: |-
+          cd /tmp/$(echo ${{ inputs.INFRASTRUCTURE_REPO }} | sed -n 's/^.*\/\(.*\).git$/\1/p')
+          git config --global user.email ${{ env.COMMIT_USER_EMAIL }}
+          git config --global user.name Github
+
+          ARGO_APPS_SHARING_IMAGE=${{ inputs.ARGO_APPS_SHARING_IMAGE }}
+          if [ -z ${ARGO_APPS_SHARING_IMAGE} ]; then
+            yq eval ".image.tag=\"${{ env.IMAGE_TAG }}\"" -i kubernetes/helm/application-charts/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
+            git add kubernetes/helm/application-charts/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
+          else
+            IFS=',' read -r -a applications <<< ${ARGO_APPS_SHARING_IMAGE}
+            for application in "${applications[@]}"
+            do
+              yq -i ".image.tag=\"${{ env.IMAGE_TAG }}\""  -i kubernetes/helm/application-charts/$application/${{ inputs.ENVIRONMENT }}.values.yaml
+              git add kubernetes/helm/application-charts/$application/${{ inputs.ENVIRONMENT }}.values.yaml
+            done
+          fi
+
+          git commit -m "Deploying image ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} 
+          Built from commit ${{ env.GIT_COMMIT }} of repository: ${{ inputs.APP_REPO_NAME }}
+          Author: Github"
+          git push origin ${{ inputs.ARGO_APP_BRANCH }}
+
+      - name: Cleanup
+        if: always()
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |-
+          ssh-add -D
+          rm -rf *

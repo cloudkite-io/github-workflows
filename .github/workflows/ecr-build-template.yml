@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      ECR_REPO_NAME:
+        required: true
+        type: string
+      AWS_ROLE_NAME:
+        required: true
+        type: string
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
+          role-session-name: ci-sess
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Login to ECR & set IMAGE_ID,IMAGE_TAG
+        run: |-
+          aws sts get-caller-identity
+          aws ecr get-login-password --region ${{ inputs.AWS_REGION }} | docker login --username AWS --password-stdin ${{ inputs.AWS_ACCOUNT_ID }}.dkr.ecr.${{ inputs.AWS_REGION }}.amazonaws.com/${{ inputs.ECR_REPO_NAME }}
+          echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+          echo "IMAGE_ID=${{ inputs.AWS_ACCOUNT_ID }}.dkr.ecr.${{ inputs.AWS_REGION }}.amazonaws.com/${{ inputs.ECR_REPO_NAME }}" >> $GITHUB_ENV
+
+      - name: Get environment for build job
+        run: echo "${{ env.IMAGE_TAG }} , ${{ env.IMAGE_ID }}"
+
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: |-
+          DOCKER_BUILDKIT=1 docker build --target k8s \
+            -t ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} \
+            -t ${{ env.IMAGE_ID }}:latest .
+
+      - name: Push
+        run: |-
+          docker push ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.IMAGE_ID }}:latest
