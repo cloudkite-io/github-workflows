@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      APPLICATION_NAME:
+        required: true
+        type: string
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_ROLE_NAME:
+        required: true
+        type: string
+      DOCKERFILE_PATH:
+        required: true
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+      REGISTRY_URL:
+        required: true
+        type: string
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
+          aws-region: ${{ inputs.AWS_REGION }}
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build and push dev image
+        if: ${{ inputs.ENVIRONMENT }} == 'dev'
+        run: |
+          docker build -f ${{ inputs.DOCKERFILE_PATH }} \
+            -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
+            -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }} \
+            .
+          docker push -a ${{ inputs.APPLICATION_NAME }}
+      - name: Promote dev image to stage
+        if: ${{ inputs.ENVIRONMENT }} == 'stage'
+        run: |
+          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev \
+            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }}
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev \
+            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
+          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
+      - name: Promote stage image to prod
+        if: ${{ inputs.ENVIRONMENT }} == 'prod'
+        run: |
+          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage \
+            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }}
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage \
+            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
+          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}

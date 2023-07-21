@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      APPLICATION_NAME:
+        required: true
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+      HELM_CHART_PATH:
+        required: true
+        type: string
+      INFRA_REPO:
+        required: true
+        type: string
+      INFRA_REPO_BRANCH:
+        required: true
+        type: string
+      REGISTRY_URL:
+        required: true
+        type: string
+    secrets:
+      INFRA_SSH_KEY:
+        required: true
+
+jobs:
+  argocd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out application code
+        uses: actions/checkout@v3
+
+      - name: Git Commit - get commit author data
+        run: |-
+          echo "COMMIT_AUTHOR_NAME=$(git log --format='%an <%ae>' -n 1 HEAD | cut -d '<' -f 2 | cut -d '@' -f 1)" >> $GITHUB_ENV
+          echo "COMMIT_AUTHOR_EMAIL=$(git log --format='%an <%ae>' -n 1 HEAD | cut -d '<' -f 2 | cut -d '>' -f 1)" >> $GITHUB_ENV
+          echo "COMMIT_AUTHOR=$(git log --format='%an <%ae>' -n 1 HEAD)" >> $GITHUB_ENV
+      
+      - name: Infrastructure repo checkout
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.INFRA_REPO }}
+          ssh-key: ${{ secrets.INFRA_SSH_KEY }}
+          ref: ${{ env.INFRA_REPO_BRANCH }}
+
+      - name: Set new tags
+        run: |
+           yq -i ".image.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.ENVIRONMENT }}.values.yaml
+
+      - name: Set new tags
+        shell: bash
+        run: |-
+          git config user.name ${{ env.$COMMIT_AUTHOR_NAME }}  
+          git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
+          git add ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
+          git commit -m "Deploying image ${{ inputs.REGISTRY_URL }}/${{ inputs.ECR_REPO_NAME }}:$GITHUB_SHA
+          Author: ${{ env.COMMIT_AUTHOR }}"
+          git push origin ${{ inputs.INFRA_REPO_BRANCH }}
