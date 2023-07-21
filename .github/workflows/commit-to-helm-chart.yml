@@ -52,7 +52,7 @@ jobs:
       - name: Set new tags
         shell: bash
         run: |-
-          git config user.name ${{ env.$COMMIT_AUTHOR_NAME }}  
+          git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
           git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
           git add ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
           git commit -m "Deploying image ${{ inputs.REGISTRY_URL }}/${{ inputs.ECR_REPO_NAME }}:$GITHUB_SHA
