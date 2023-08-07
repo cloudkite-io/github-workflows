@@ -12,6 +12,9 @@ on:
       ENVIRONMENT:
         required: true
         type: string
+    secrets:
+      INFRA_SSH_PRIVATE_KEY:
+        required: true
 
 jobs:
   deploy:
