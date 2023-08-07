@@ -1,0 +1,45 @@
+name: Deploy to infra
+
+on:
+  workflow_call:
+    inputs:
+      INFRASTRUCTURE_REPO:
+        required: true
+        type: string
+      ARGO_APP_NAME:
+        required: true
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set IMAGE_TAG
+        run: |-
+          echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+
+      - name: Clone infrastructure repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.INFRASTRUCTURE_REPO }}
+          ref: 'main'
+          ssh-key: ${{ secrets.INFRA_SSH_PRIVATE_KEY }}
+
+      - name: Update image tag in values file
+        run:
+          yq eval -i '.image.tag="${{ env.IMAGE_TAG }}"' 'kubernetes/helm/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml'
+        
+
+      - name: commit changes to image tag
+        run: |
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config user.name "${GITHUB_ACTOR}"
+          git add kubernetes/helm/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
+          git commit -m "github-action: update image tag to ${{ env.IMAGE_TAG }} by ${GITHUB_ACTOR}"
+          git push

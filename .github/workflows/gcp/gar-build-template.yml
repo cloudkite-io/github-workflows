@@ -1,0 +1,51 @@
+name: Build and Push to GAR
+
+on:
+  workflow_call:
+    inputs:
+      GAR_REPO_DOMAIN:
+        required: true
+        type: string
+      GAR_REPO_PATH:
+        required: true
+        type: string
+      SERVICE_ACCOUNT:
+        required: true
+        type: string
+      WORKLOAD_IDENTITY_PROVIDER:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set IMAGE_ID,IMAGE_TAG
+        run: |-
+          echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+          echo "IMAGE_ID=${{ inputs.GAR_REPO_DOMAIN }}/${{ inputs.GAR_REPO_PATH }}" >> $GITHUB_ENV
+      
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v1.1.1'
+        with:
+          workload_identity_provider: ${{ inputs.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ inputs.SERVICE_ACCOUNT }}
+
+      - name: Build and tag Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} \
+          -t ${{ env.IMAGE_ID }}:${{ github.ref_name}} .
+      
+      - name: Docker configuration
+        run: |-
+          gcloud --quiet auth configure-docker ${{ inputs.GAR_REPO_DOMAIN }}
+
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.IMAGE_ID }}:${{ github.ref_name}}
+          git push
