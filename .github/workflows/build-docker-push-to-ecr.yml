@@ -15,6 +15,9 @@ on:
       AWS_ROLE_NAME:
         required: true
         type: string
+      DOCKERFILE_NAME:
+        required: true
+        type: string
       DOCKERFILE_PATH:
         required: true
         type: string
@@ -28,6 +31,8 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    defaults:
+      working-directory: ${{ inputs.DOCKERFILE_PATH }}
     permissions:
       id-token: write
       contents: read
@@ -46,7 +51,7 @@ jobs:
       - name: Build and push dev image
         if: ${{ inputs.ENVIRONMENT }} == 'dev'
         run: |
-          docker build -f ${{ inputs.DOCKERFILE_PATH }} \
+          docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }} \
             .
