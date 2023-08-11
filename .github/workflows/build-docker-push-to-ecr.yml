@@ -54,7 +54,7 @@ jobs:
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }} \
             .
-          docker push -a ${{ inputs.APPLICATION_NAME }}
+          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Promote dev image to stage
         if: ${{ inputs.ENVIRONMENT }} == 'stage'
         run: |
