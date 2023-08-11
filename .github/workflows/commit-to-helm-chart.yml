@@ -41,9 +41,9 @@ jobs:
       - name: Infrastructure repo checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.INFRA_REPO }}
+          repository: ${{ inputs.INFRA_REPO }}
           ssh-key: ${{ secrets.INFRA_SSH_KEY }}
-          ref: ${{ env.INFRA_REPO_BRANCH }}
+          ref: ${{ inputs.INFRA_REPO_BRANCH }}
 
       - name: Set new tags
         run: |
