@@ -47,11 +47,6 @@ jobs:
 
       - name: Set new tags
         run: |
-           pwd
-           ls -al
-           cd ../..
-           pwd
-           ls -al
            yq -i ".image.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
 
       - name: Set new tags
