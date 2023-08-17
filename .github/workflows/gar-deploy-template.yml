@@ -53,6 +53,11 @@ jobs:
           workload_identity_provider: ${{ inputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ inputs.SERVICE_ACCOUNT }}
 
+      - name: Docker configuration
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |-
+          gcloud --quiet auth configure-docker ${{ inputs.GAR_REPO_DOMAIN }}
+
       - name: Build and tag Docker image
         if: startsWith(github.ref, 'refs/tags/')
         run: |
