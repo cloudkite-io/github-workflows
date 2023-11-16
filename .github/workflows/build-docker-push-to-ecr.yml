@@ -55,21 +55,10 @@ jobs:
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }} \
             .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
-      - name: Promote dev image to stage
-        if: ${{ inputs.ENVIRONMENT == 'stage' }}
+      - name: Promote built image to stage or prod
+        if: ${{ inputs.ENVIRONMENT != 'dev' }}
         run: |
           docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev
           docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev \
-            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }}
-          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev \
             ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
-      - name: Promote stage image to prod
-        if: ${{ inputs.ENVIRONMENT == 'prod' }}
-        run: |
-          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage
-          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage \
-            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }}
-          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:stage \
-            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
+          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
