@@ -46,19 +46,11 @@ jobs:
       - name: Login to AWS ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-      - name: Build and push dev image
+      - name: Build and push container image
         if: ${{ inputs.ENVIRONMENT == 'dev' }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.ENVIRONMENT }} \
             .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
-      - name: Promote built image to stage or prod
-        if: ${{ inputs.ENVIRONMENT != 'dev' }}
-        run: |
-          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev
-          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:dev \
-            ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
