@@ -30,6 +30,9 @@ on:
       REGISTRY_URL:
         required: true
         type: string
+    secrets:
+      BUILD_ARG:
+        required: false
 
 jobs:
   docker:
@@ -55,5 +58,5 @@ jobs:
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . ${{ inputs.BUILD_ARG }}
+            . ${{ secrets.BUILD_ARG }}
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
