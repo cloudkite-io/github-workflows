@@ -15,9 +15,6 @@ on:
       AWS_ROLE_NAME:
         required: true
         type: string
-      BUILD_ARG:
-        required: false
-        type: string
       DOCKERFILE_NAME:
         required: true
         type: string
