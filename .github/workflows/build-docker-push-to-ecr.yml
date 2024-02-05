@@ -55,5 +55,5 @@ jobs:
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . --build-arg ${{ secrets.BUILD_ARG }}
+            . ${{ secrets.BUILD_ARG }}
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
