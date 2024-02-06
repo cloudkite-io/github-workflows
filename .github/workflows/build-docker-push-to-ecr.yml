@@ -6,6 +6,12 @@ on:
       APPLICATION_NAME:
         required: true
         type: string
+      ARTIFACT_NAME:
+        required: false
+        type: string
+      ARTIFACT_PATH:
+        required: false
+        type: string
       AWS_ACCOUNT_ID:
         required: true
         type: string
@@ -49,6 +55,12 @@ jobs:
       - name: Login to AWS ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+      - name: Download artifact
+        if: ${{ inputs.ARTIFACT_NAME && input.ARTIFACT_PATH }}
+        uses: actions/download-artifact@master
+        with:
+          name: ${{ inputs.ARTIFACT_NAME }}
+          path: ${{ input.ARTIFACT_PATH }}
       - name: Build and push container image
         if: ${{ inputs.ENVIRONMENT == 'dev' }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
