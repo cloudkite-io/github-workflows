@@ -21,7 +21,7 @@ on:
       TASK_DEFINITION_FILE_PATH:
         required: false
         type: string
-        default: 
+        default: 'task-definition.json'
       IMAGE_URL:
         required: true
         type: string
