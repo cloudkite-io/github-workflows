@@ -18,20 +18,21 @@ on:
       ECS_SERVICE_NAME:
         required: true
         type: string
+      TASK_DEFINITION_FILE_PATH:
+        required: false
+        type: string
+        default: 
       IMAGE_URL:
         required: true
         type: string
 jobs:
   docker:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
           aws-region: ${{ inputs.AWS_REGION }}
@@ -40,7 +41,7 @@ jobs:
         id: render-ecs-container
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: task-definition.json
+          task-definition: ${{ inputs.TASK_DEFINITION_FILE_PATH }}
           container-name: ${{ inputs.ECS_SERVICE_NAME }}
           image: ${{ inputs.IMAGE_URL }}
       - name: Deploy to Amazon ECS service
