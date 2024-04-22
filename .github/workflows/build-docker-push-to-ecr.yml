@@ -16,10 +16,10 @@ on:
         required: true
         type: string
       DOCKERFILE_NAME:
-        required: true
+        required: false
         type: string
       DOCKERFILE_PATH:
-        required: true
+        required: false
         type: string
       ENVIRONMENT:
         required: true
@@ -57,3 +57,10 @@ jobs:
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             . ${{ secrets.BUILD_ARG }}
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
+      - name: Retag and push container image
+        if: ${{ inputs.ENVIRONMENT == 'prod' }}
+        working-directory: ${{ inputs.DOCKERFILE_PATH }}
+        run: |
+          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}${{ github.ref_name }}
+          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}${{ github.ref_name }}
