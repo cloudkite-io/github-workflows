@@ -19,7 +19,7 @@ on:
         required: false
         type: string
       DOCKERFILE_PATH:
-        required: false
+        required: true
         type: string
       ENVIRONMENT:
         required: true
