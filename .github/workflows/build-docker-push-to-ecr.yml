@@ -30,7 +30,7 @@ on:
       RETAG:
         required: false
         type: boolean
-        default: 'true'
+        default: true
 
     secrets:
       BUILD_ARG:
@@ -62,7 +62,7 @@ jobs:
             . ${{ secrets.BUILD_ARG }}
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
-        if: ${{ inputs.ENVIRONMENT != 'dev' && inputs.RETAG == 'true' }}
+        if: ${{ inputs.ENVIRONMENT == 'prod' && inputs.RETAG == 'true' }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
