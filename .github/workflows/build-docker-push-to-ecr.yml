@@ -27,6 +27,11 @@ on:
       REGISTRY_URL:
         required: true
         type: string
+      RETAG:
+        required: false
+        type: boolean
+        default: 'true'
+
     secrets:
       BUILD_ARG:
         required: false
@@ -50,7 +55,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
       - name: Build and push container image
-        if: ${{ inputs.ENVIRONMENT == 'dev' }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
@@ -58,7 +62,7 @@ jobs:
             . ${{ secrets.BUILD_ARG }}
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
-        if: ${{ inputs.ENVIRONMENT == 'prod' }}
+        if: ${{ inputs.ENVIRONMENT != 'dev' && inputs.RETAG == 'true' }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
