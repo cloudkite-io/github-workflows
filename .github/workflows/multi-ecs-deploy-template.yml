@@ -1,0 +1,78 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_ROLE_NAME:
+        required: true
+        type: string
+      ECS_CLUSTER_NAME:
+        required: true
+        type: string
+      ECS_SERVICE_NAME:
+        required: true
+        type: string
+      ORG_ID:
+        required: true
+        type: string
+      ORG_NAME:
+        required: true
+        type: string
+      TASK_DEFINITION_FILE_PATH:
+        required: false
+        type: string
+        default: 'task-definition.json'
+      IMAGE_URL:
+        required: true
+        type: string
+      
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
+          aws-region: ${{ inputs.AWS_REGION }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+
+      - name: Render multi-client task definition
+        id: render-task-definition
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs')
+            const template = fs.readFileSync('${{ inputs.TASK_DEFINITION_FILE_PATH }}', 'utf8')
+            const rendered = template
+              .replace(/{{ORG_ID}}/g, '${{ inputs.ORG_ID }}')
+              .replace(/{{ORG_NAME}}/g, '${{ inputs.ORG_NAME }}')
+            fs.writeFileSync('./task-definition.json', rendered)
+            console.log(rendered)
+            return 'task-definition.json'
+
+      - name: Render Amazon ECS task definition image
+        id: render-ecs-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ inputs.ECS_SERVICE_NAME }}
+          image: ${{ inputs.IMAGE_URL }}
+            
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-ecs-container.outputs.task-definition }}
+          service: ${{ inputs.ECS_SERVICE_NAME }}
+          cluster: ${{ inputs.ECS_CLUSTER_NAME }}
+          force-new-deployment: 'true'
+          wait-for-service-stability: 'true'
+          wait-for-minutes: 5
