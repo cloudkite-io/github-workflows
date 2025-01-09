@@ -3,6 +3,9 @@ name: Build and push docker image to Azure Container Registry
 on:
   workflow_call:
     inputs:
+      APPLICATION_NAME:
+        required: true
+        type: string
       ACR_NAME:
         required: true
         type: string
@@ -58,12 +61,12 @@ jobs:
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
-            -t ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
+            -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             . ${{ inputs.BUILD_ARG }}
-          docker push -a ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}
+          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
         run: |
-          docker pull ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          docker tag ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
-          docker push ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
+          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
+          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
