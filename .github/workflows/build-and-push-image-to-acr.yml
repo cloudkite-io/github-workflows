@@ -60,7 +60,7 @@ jobs:
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             . ${{ inputs.BUILD_ARG }}
-          docker push -a ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}
+          docker push -a ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
         run: |
