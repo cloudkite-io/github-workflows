@@ -3,9 +3,9 @@ name: Build and push docker image to Azure Container Registry
 on:
   workflow_call:
     inputs:
-      ACR_NAME:
-        required: true
-        type: string
+      # ACR_NAME:
+      #   required: true
+      #   type: string
       AZURE_CLIENT_ID:
         required: true
         type: string
