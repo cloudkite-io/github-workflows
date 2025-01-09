@@ -3,9 +3,9 @@ name: Build and push docker image to Azure Container Registry
 on:
   workflow_call:
     inputs:
-      # ACR_NAME:
-      #   required: true
-      #   type: string
+      ACR_NAME:
+        required: true
+        type: string
       AZURE_CLIENT_ID:
         required: true
         type: string
@@ -58,12 +58,12 @@ jobs:
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
-            -t ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . ${{ secrets.BUILD_ARG }}
+            -t ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
+            . ${{ inputs.BUILD_ARG }}
           docker push -a ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
         run: |
-          docker pull ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          docker tag ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
-          docker push ${{ ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
+          docker pull ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
+          docker tag ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
+          docker push ${{ inputs.ACR_NAME }}.azurecr.io/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
