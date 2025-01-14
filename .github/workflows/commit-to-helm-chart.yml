@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out application code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Git Commit - get commit author data
         run: |-
@@ -41,7 +41,7 @@ jobs:
           echo "COMMIT_AUTHOR=$(git log --format='%an <%ae>' -n 1 HEAD)" >> $GITHUB_ENV
       
       - name: Infrastructure repo checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.INFRA_REPO }}
           ssh-key: ${{ secrets.INFRA_SSH_KEY }}
