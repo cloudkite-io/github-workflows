@@ -55,11 +55,14 @@ jobs:
             // Define the environment variables to replace
             console.log('${{ inputs.ENV_VARS }}')
             const envVars = ${{ fromJSON(inputs.ENV_VARS) }};
+            console.log("envVars", envVars)
+            console.log("Object.entries(envVars)", Object.entries(envVars))
 
             // Replace all occurrences of placeholders with their corresponding values
             let rendered = template;
             for (const [key, value] of Object.entries(envVars)) {
               const regex = new RegExp(`{{${key}}}`, 'g');
+              console.log("regex", regex)
               rendered = rendered.replace(regex, value);
             }
 
