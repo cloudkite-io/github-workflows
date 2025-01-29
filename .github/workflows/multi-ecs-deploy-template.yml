@@ -54,7 +54,7 @@ jobs:
 
             // Define the environment variables to replace
             console.log('${{ inputs.ENV_VARS }}')
-            const envVars = JSON.parse('${{ toJSON(inputs.ENV_VARS) }}');
+            const envVars = ${{ fromJSON(inputs.ENV_VARS) }};
 
             // Replace all occurrences of placeholders with their corresponding values
             let rendered = template;
