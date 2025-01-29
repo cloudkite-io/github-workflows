@@ -61,6 +61,8 @@ jobs:
             // Replace all occurrences of placeholders with their corresponding values
             let rendered = template;
             for (const [key, value] of Object.entries(envVars)) {
+              console.log("key", key)
+              console.log("value", value)
               const regex = new RegExp(`{{${key}}}`, 'g');
               console.log("regex", regex)
               rendered = rendered.replace(regex, value);
