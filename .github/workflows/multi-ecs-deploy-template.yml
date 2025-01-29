@@ -54,7 +54,7 @@ jobs:
 
             // Define the environment variables to replace
             console.log('${{ inputs.ENV_VARS }}')
-            const envVars = JSON.parse(${{ inputs.ENV_VARS }});
+            const envVars = JSON.parse('${{ toJSON(inputs.ENV_VARS) }}');
             console.log("envVars", envVars)
             console.log("Object.entries(envVars)", Object.entries(envVars))
 
