@@ -18,10 +18,7 @@ on:
       ECS_SERVICE_NAME:
         required: true
         type: string
-      ORG_ID:
-        required: true
-        type: string
-      ORG_NAME:
+      ENV_VARS:
         required: true
         type: string
       TASK_DEFINITION_FILE_PATH:
@@ -51,10 +48,21 @@ jobs:
         with:
           script: |
             const fs = require('fs')
+
+            // Read the template file
             const template = fs.readFileSync('${{ inputs.TASK_DEFINITION_FILE_PATH }}', 'utf8')
-            const rendered = template
-              .replace(/{{ORG_ID}}/g, '${{ inputs.ORG_ID }}')
-              .replace(/{{ORG_NAME}}/g, '${{ inputs.ORG_NAME }}')
+
+            // Define the environment variables to replace
+            const envVars = JSON.parse('${{ toJSON(inputs.ENV_VARS) }}');
+
+            // Replace all occurrences of placeholders with their corresponding values
+            let rendered = template;
+            for (const [key, value] of Object.entries(envVars)) {
+              const regex = new RegExp(`{{${key}}}`, 'g');
+              rendered = rendered.replace(regex, value);
+            }
+
+            // Write the processed file
             fs.writeFileSync('./task-definition.json', rendered)
             console.log(rendered)
             return 'task-definition.json'
