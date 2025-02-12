@@ -22,6 +22,8 @@ jobs:
       contents: read # This is required for actions/checkout
     uses: cloudkite-io/github-workflows/.github/workflows/gar-build-template.yml
     with:
+      PROJECT_ENV: 'dev'
+      GCP_PROJECT: 'project-id'
       GAR_REPO_DOMAIN: 'us-central1-docker.pkg.dev' 
       GAR_REPO_PATH: 'project-name/repo-name/app-name' # The GAR repo path where the image will be stored
       SERVICE_ACCOUNT: 'github-actions@project-name.iam.gserviceaccount.com' # The service account used to authenticate to GAR
