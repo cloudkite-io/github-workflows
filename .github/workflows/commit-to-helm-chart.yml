@@ -72,18 +72,16 @@ jobs:
 
           # Iterate over the array and process each app
           for app in "${apps[@]}"; do
-              echo "Setting tag for app: $app"
-              yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
+            echo "Setting tag for app: $app"
+            yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
           done
 
-          git status
-
-      # - name: Set new tags
-      #   shell: bash
-      #   run: |-
-      #     git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
-      #     git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
-      #     git add .
-      #     git commit -m "Deploying $GITHUB_SHA
-      #     Author: ${{ env.COMMIT_AUTHOR }}"
-      #     git push origin ${{ inputs.INFRA_REPO_BRANCH }}
+      - name: Set new tags
+        shell: bash
+        run: |-
+          git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
+          git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
+          git add .
+          git commit -m "Deploying $GITHUB_SHA
+          Author: ${{ env.COMMIT_AUTHOR }}"
+          git push origin ${{ inputs.INFRA_REPO_BRANCH }}
