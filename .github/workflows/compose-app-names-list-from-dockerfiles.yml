@@ -40,6 +40,6 @@ jobs:
           # remove trailing newline
           app_names_list=${app_names_list%$'\n'}
           # put into json
-          app_names_json=$(jq -ncR '[inputs]' <<< "$app_names_list" | tr '"' "'")
+          app_names_json=$(jq -ncR '[inputs]' <<< "$app_names_list")
           echo "apps=$app_names_json" >> "$GITHUB_OUTPUT"
           echo $app_names_json
