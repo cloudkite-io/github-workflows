@@ -76,7 +76,7 @@ jobs:
             yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
           done
 
-      - name: Set new tags
+      - name: Commit and push
         shell: bash
         run: |-
           git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
