@@ -31,7 +31,7 @@ jobs:
           app_names_list=""
           newline=$'\n'
 
-          for dockerfile in ${{ inputs.DOCKEFILES_FOLDER_PATH }}/*; do
+          for dockerfile in ${{ inputs.DOCKERFILES_FOLDER_PATH }}/*; do
             filename=$(basename -- "$dockerfile")
             base_name="${filename%.*}"
             app_names_list+="$base_name$newline"
