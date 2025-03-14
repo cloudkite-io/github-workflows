@@ -12,7 +12,7 @@ on:
         type: string
       APPLICATIONS_PREFIX:
         required: false
-        type: sting
+        type: string
       ENVIRONMENT:
         required: true
         type: string
