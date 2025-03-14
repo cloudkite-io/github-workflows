@@ -1,13 +1,18 @@
-# Use this workflow when you need to update a global tag
-
+# Use APPLICATION_NAME if you have a single image tag to commit, or APPLICATIONS_LIST if multiple
 name: Deploy
 
 on:
   workflow_call:
     inputs:
       APPLICATION_NAME:
-        required: true
+        required: false
         type: string
+      APPLICATIONS_LIST:
+        required: false
+        type: string
+      APPLICATIONS_PREFIX:
+        required: false
+        type: sting
       ENVIRONMENT:
         required: true
         type: string
@@ -47,16 +52,23 @@ jobs:
           ssh-key: ${{ secrets.INFRA_SSH_KEY }}
           ref: ${{ inputs.INFRA_REPO_BRANCH }}
 
-      - name: Set new tags
+      - name: Set new tag
+        if: ${{ inputs.APPLICATION_NAME != '' && inputs.APPLICATIONS_LIST == '' }}
         run: |
            yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
 
       - name: Set new tags
-        shell: bash
-        run: |-
-          git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
-          git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
-          git add ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
-          git commit -m "Deploying image ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
-          Author: ${{ env.COMMIT_AUTHOR }}"
-          git push origin ${{ inputs.INFRA_REPO_BRANCH }}
+        if: ${{ inputs.APPLICATION_NAME == '' && inputs.APPLICATIONS_LIST != '' }}
+        run: |
+          #  yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
+          echo ${{ inputs.APPLICATIONS_LIST }}
+
+      # - name: Set new tags
+      #   shell: bash
+      #   run: |-
+      #     git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
+      #     git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
+      #     git add .
+      #     git commit -m "Deploying $GITHUB_SHA
+      #     Author: ${{ env.COMMIT_AUTHOR }}"
+      #     git push origin ${{ inputs.INFRA_REPO_BRANCH }}

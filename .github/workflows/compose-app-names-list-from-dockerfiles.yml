@@ -1,0 +1,44 @@
+name: Iterate over Dockerfiles in the folder and compose a list of app names in JSON format to further use in a matrix
+
+# For this setup to work, all dockerfiles need to reside in a single folder, 
+# and be named in a following format: `APP_NAME.Dockerfile`
+
+on:
+  workflow_call:
+    inputs:
+      DOCKERFILES_FOLDER_PATH:
+        required: true
+        default: Dockerfile
+        type: string
+    outputs:
+      APPS:
+        description: "List of applications in JSON format"
+        value: ${{ jobs.compose-apps-list.outputs.apps }}
+
+jobs:
+  compose-apps-list:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      apps: ${{ steps.script.outputs.apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - id: script
+        run: |
+          app_names_list=""
+          newline=$'\n'
+
+          for dockerfile in ${{ inputs.DOCKEFILES_FOLDER_PATH }}/*; do
+            filename=$(basename -- "$dockerfile")
+            base_name="${filename%.*}"
+            app_names_list+="$base_name$newline"
+          done
+
+          # remove trailing newline
+          app_names_list=${app_names_list%$'\n'}
+          # put into json
+          app_names_json=$(jq -ncR '[inputs]' <<< "$app_names_list")
+          echo "apps=$app_names_json" >> "$GITHUB_OUTPUT"
