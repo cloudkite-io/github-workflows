@@ -61,7 +61,7 @@ jobs:
         if: ${{ inputs.APPLICATION_NAME == '' && inputs.APPLICATIONS_LIST != '' }}
         run: |
           #  yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
-          echo ${{ inputs.APPLICATIONS_LIST }}
+          echo ${{ fromJson(inputs.APPLICATIONS_LIST) }}
 
       # - name: Set new tags
       #   shell: bash
