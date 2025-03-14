@@ -82,6 +82,6 @@ jobs:
           git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
           git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
           git add .
-          git commit -m "Deploying $GITHUB_SHA
+          git commit -m "Deploy $GITHUB_SHA
           Author: ${{ env.COMMIT_AUTHOR }}"
           git push origin ${{ inputs.INFRA_REPO_BRANCH }}
