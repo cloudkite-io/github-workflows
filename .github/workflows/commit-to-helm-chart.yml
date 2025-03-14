@@ -73,7 +73,7 @@ jobs:
           # Iterate over the array and process each app
           for app in "${app[@]}"; do
               echo "Setting tag for app: $app"
-              yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-${app}/${{ inputs.ENVIRONMENT }}.values.yaml
+              yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
           done
 
           git status
