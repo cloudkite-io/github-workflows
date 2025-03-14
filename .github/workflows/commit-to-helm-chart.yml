@@ -60,7 +60,6 @@ jobs:
       - name: Set new tags
         if: ${{ inputs.APPLICATION_NAME == '' && inputs.APPLICATIONS_LIST != '' }}
         run: |
-          #  yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
           input=${{ inputs.APPLICATIONS_LIST }}
           input="${input#[}"
           input="${input%]}"
@@ -69,13 +68,15 @@ jobs:
           IFS=','
 
           # Read the input into an array
-          read -ra services <<< "$input"
+          read -ra apps <<< "$input"
 
-          # Iterate over the array and process each service
-          for service in "${services[@]}"; do
-              echo "Processing service: $service"
-              # Add your processing logic here
+          # Iterate over the array and process each app
+          for app in "${app[@]}"; do
+              echo "Setting tag for app: $app"
+              yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-${app}/${{ inputs.ENVIRONMENT }}.values.yaml
           done
+
+          git status
 
       # - name: Set new tags
       #   shell: bash
