@@ -1,0 +1,48 @@
+name: Publish Apollo SDL
+
+on:
+  workflow_call:
+    inputs:
+      ECR_REPO_LABEL:
+        required: true
+        type: string
+      APOLLO_GRAPH:
+        required: true
+        type: string
+    secrets:
+      APOLLO_KEY:
+        required: true
+
+jobs:
+  apollo_publish:
+    name: "Validate and Push SDL to Apollo"
+    runs-on: ubuntu-latest
+    env:
+      APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
+      APOLLO_GRAPH: ${{ inputs.APOLLO_GRAPH }}
+      APOLLO_VCS_COMMIT: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Pull SDL generated
+        id: pull_sdl
+        uses: actions/download-artifact@v4
+        with:
+          name: schema_graphl
+          path: ./
+
+      - name: Install Rover
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/v0.13.0 | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+
+      - name: Check Changes Against Dev variant
+        run: |
+          rover subgraph check ${{ env.APOLLO_GRAPH }} \
+            --schema ./schema.graphql \
+            --background \
+            --name ${{ inputs.ECR_REPO_LABEL }}
+
+      - name: Publish to Apollo Supergraph
+        run: |
+          rover subgraph publish ${{ env.APOLLO_GRAPH }} \
+            --schema ./schema.graphql \
+            --name ${{ inputs.ECR_REPO_LABEL }}
