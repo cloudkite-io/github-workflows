@@ -28,6 +28,9 @@ on:
       REGISTRY_URL:
         required: true
         type: string
+      SUPPLIED_ENVS:
+        required: false
+        type: string
     secrets:
       INFRA_SSH_KEY:
         required: true
@@ -74,6 +77,24 @@ jobs:
           for app in "${apps[@]}"; do
             echo "Setting tag for app: $app"
             yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
+          done
+
+      - name: Set supplied envs
+        if: ${{ inputs.SUPPLIED_ENVS != '' }}
+        run: |
+          input=${{ inputs.SUPPLIED_ENVS }}
+          input="${input#[}"
+          input="${input%]}"
+
+          IFS=','
+
+          read -ra envs <<< "$input"
+
+          for env in "${envs[@]}"; do
+            key=$(echo "$env" | cut -d '=' -f 1)
+            value=$(echo "$env" | cut -d '=' -f 2-)
+            echo "Setting .standard-app.env.$key = $value"
+            yq -i ".standard-app.env.\"$key\" = \"$value\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
           done
 
       - name: Commit and push
