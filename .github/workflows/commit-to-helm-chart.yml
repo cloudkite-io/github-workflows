@@ -79,6 +79,7 @@ jobs:
             yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
           done
 
+      # This is an optional step to update envs during deploy. For now this is used by Conduithealth to update API_VERSION env with the deployed commit SHA
       - name: Set supplied envs
         if: ${{ inputs.SUPPLIED_ENVS != '' }}
         run: |
