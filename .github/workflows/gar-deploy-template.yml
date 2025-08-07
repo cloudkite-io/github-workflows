@@ -24,6 +24,14 @@ on:
       WORKLOAD_IDENTITY_PROVIDER:
         required: false
         type: string
+      INFRASTRUCTURE_BRANCH:
+        required: false
+        type: string
+        default: 'main'
+      IMAGE_PATH:
+        required: false
+        type: string
+        default: '.image.tag'
       
     secrets:
       INFRA_SSH_PRIVATE_KEY:
@@ -38,7 +46,7 @@ jobs:
 
       - name: Set IMAGE_TAG
         run: |-
-          echo "IMAGE_TAG=$(echo ${{ github.sha }} | cut -c 1-9)" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$GITHUB_SHA" >> $GITHUB_ENV
       
       - name: Set IMAGE_ID
         if: startsWith(github.ref, 'refs/tags/')
@@ -58,7 +66,7 @@ jobs:
         run: |-
           gcloud --quiet auth configure-docker ${{ inputs.GAR_REPO_DOMAIN }}
 
-      - name: Build and tag Docker image
+      - name: Pull and tag Docker image
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           docker pull ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }}
@@ -74,12 +82,12 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: ${{ inputs.INFRASTRUCTURE_REPO }}
-          ref: 'main'
+          ref: ${{ inputs.INFRASTRUCTURE_BRANCH }}
           ssh-key: ${{ secrets.INFRA_SSH_PRIVATE_KEY }}
 
       - name: Update image tag in values file
         run:
-          yq eval -i '.image.tag="${{ env.IMAGE_TAG }}"' 'kubernetes/helm/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml'
+          yq eval -i '${{ inputs.IMAGE_PATH }}="${{ env.IMAGE_TAG }}"' 'kubernetes/helm/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml'
         
 
       - name: commit changes to image tag
@@ -88,4 +96,4 @@ jobs:
           git config user.name "${GITHUB_ACTOR}"
           git add kubernetes/helm/${{ inputs.ARGO_APP_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
           git commit -m "github-action: update image tag to ${{ env.IMAGE_TAG }} by ${GITHUB_ACTOR}"
-          git push
+          git push origin ${{ inputs.INFRASTRUCTURE_BRANCH }}
