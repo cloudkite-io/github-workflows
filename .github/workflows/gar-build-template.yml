@@ -21,6 +21,10 @@ on:
       WORKLOAD_IDENTITY_PROVIDER:
         required: true
         type: string
+      DOCKERFILE_PATH:
+        required: false
+        type: string
+        default: './Dockerfile'
 
 jobs:
   build:
@@ -44,8 +48,9 @@ jobs:
 
       - name: Build and tag Docker image
         run: |
-          docker build -t ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} \
-          -t ${{ env.IMAGE_ID }}:${{ github.ref_name}} .
+          docker build -f ${{ inputs.DOCKERFILE_PATH }} \
+            -t ${{ env.IMAGE_ID }}:${{ env.IMAGE_TAG }} \
+            -t ${{ env.IMAGE_ID }}:${{ github.ref_name }} .
       
       - name: Docker configuration
         run: |-
