@@ -1,4 +1,4 @@
-name: Build and push docker image to Azure Container Registry
+name: Build and push docker image to Elastic Container Registry
 
 on:
   workflow_call:
