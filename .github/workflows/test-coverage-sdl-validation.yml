@@ -20,6 +20,17 @@ jobs:
   test_cov_sdl:
     name: "Pytest, Coverage and Graph SDL"
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_USER: authorization
+          MYSQL_PASSWORD: q1w2e3
+          MYSQL_DATABASE: authorization
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +44,7 @@ jobs:
       - name: Run unittests
         run: |
           . ~/.venvs/${{ inputs.APP_NAME }}/bin/activate
+          cp .env.dist .env
           pytest --cov=. --cov-report xml
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
