@@ -20,16 +20,13 @@ jobs:
   test_cov_sdl:
     name: "Pytest, Coverage and Graph SDL"
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [${{ inputs.PYTHON_VERSION }}]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ inputs.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ inputs.PYTHON_VERSION }}
       - name: Set up dependencies
         run: ./setup.sh
         shell: bash
@@ -57,19 +54,16 @@ jobs:
   supergraph:
     name: "Validate Subgraph changes"
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [${{ inputs.PYTHON_VERSION }}]
     env:
       APOLLO_VCS_COMMIT: ${{ github.event.pull_request.head.sha }}
     needs: [test_cov_sdl]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ inputs.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ inputs.PYTHON_VERSION }}
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
