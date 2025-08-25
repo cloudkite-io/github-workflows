@@ -1,0 +1,97 @@
+name: Test, Coverage and GraphQL SDL Validation
+
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        required: true
+        type: string
+        description: "Application name for virtual environment path"
+      PYTHON_VERSION:
+        required: false
+        type: string
+        default: "3.10"
+    secrets:
+      apollo-secret:
+        required: true
+        description: "AWS Secrets Manager secret ID for Apollo credentials"
+
+jobs:
+  test_cov_sdl:
+    name: "Pytest, Coverage and Graph SDL"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [${{ inputs.PYTHON_VERSION }}]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up dependencies
+        run: ./setup.sh
+        shell: bash
+      - name: Run unittests
+        run: |
+          . ~/.venvs/${{ inputs.APP_NAME }}/bin/activate
+          pytest --cov=. --cov-report xml
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
+          title: "Unit Test Coverage Report"
+          remove-link-from-badge: true
+      - name: Generate SDL
+        run: |
+          . ~/.venvs/${{ inputs.APP_NAME }}/bin/activate
+          strawberry export-schema main_server:schema > schema.graphql
+      - name: Upload SDL as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema_graphql
+          path: ./schema.graphql
+          retention-days: 2
+
+  supergraph:
+    name: "Validate Subgraph changes"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [${{ inputs.PYTHON_VERSION }}]
+    env:
+      APOLLO_VCS_COMMIT: ${{ github.event.pull_request.head.sha }}
+    needs: [test_cov_sdl]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.DEV_DEPLOYER_ROLE_IAM }}
+          role-session-name: "Apollo-Credentials-${{ vars.ECR_REPO_LABEL }}"
+      - name: Pull secrets from AWS
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          secret-ids: |
+            ${{ secrets.apollo-secret }}
+          parse-json-secrets: true
+      - name: Pull SDL generated
+        id: pull_sdl
+        uses: actions/download-artifact@v4
+        with:
+          name: schema_graphql
+          path: ./
+      - name: Install Rover
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/v0.13.0 | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+      - name: Check Changes Against Dev variant
+        run: |
+          rover subgraph check $DEV_V2_APOLLO_GRAPH --schema ./schema.graphql --background --name ${{ vars.ECR_REPO_LABEL }}
