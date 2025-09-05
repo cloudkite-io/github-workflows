@@ -1,0 +1,74 @@
+name: Build and push docker image to ECR with custom SHA
+
+on:
+  workflow_call:
+    inputs:
+      APPLICATION_NAME:
+        required: true
+        type: string
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_ROLE_NAME:
+        required: true
+        type: string
+      DOCKERFILE_NAME:
+        required: false
+        type: string
+      DOCKERFILE_PATH:
+        required: false
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+      REGISTRY_URL:
+        required: true
+        type: string
+      RETAG:
+        required: false
+        type: boolean
+        default: true
+      RELEVANT_SHA:
+        required: false
+        type: string
+        default: ""
+
+    secrets:
+      BUILD_ARG:
+        required: false
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT_ID }}:role/${{ inputs.AWS_ROLE_NAME }}
+          aws-region: ${{ inputs.AWS_REGION }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build and push container image
+        if: ${{ (inputs.ENVIRONMENT != 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true')) || (inputs.RETAG == false || inputs.RETAG == 'false') }}
+        working-directory: ${{ inputs.DOCKERFILE_PATH }}
+        run: |
+          docker build -f ${{ inputs.DOCKERFILE_NAME }} \
+            -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.RELEVANT_SHA || github.sha }} \
+            . ${{ secrets.BUILD_ARG }}
+          docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
+      - name: Retag and push container image
+        if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
+        run: |
+          docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.RELEVANT_SHA || github.sha }}
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.RELEVANT_SHA || github.sha }} ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
+          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
