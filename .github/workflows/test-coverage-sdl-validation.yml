@@ -11,6 +11,9 @@ on:
         required: false
         type: string
         default: "3.10"
+      APOLLO_GRAPH:
+        required: true
+        type: string
     secrets:
       apollo-secret:
         required: true
@@ -100,4 +103,4 @@ jobs:
           echo "$HOME/.rover/bin" >> $GITHUB_PATH
       - name: Check Changes Against Dev variant
         run: |
-          rover subgraph check $DEV_V2_APOLLO_GRAPH --schema ./schema.graphql --background --name ${{ vars.ECR_REPO_LABEL }}
+          rover subgraph check $APOLLO_GRAPH --schema ./schema.graphql --background --name ${{ vars.ECR_REPO_LABEL }}
