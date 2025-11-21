@@ -1,4 +1,4 @@
-name: Build and push docker image to Azure Container Registry
+name: Build and push docker image to a AWS ECR
 
 on:
   workflow_call:
@@ -14,6 +14,9 @@ on:
         type: string
       AWS_ROLE_NAME:
         required: true
+        type: string
+      BUILD_ARGS:
+        required: false
         type: string
       DOCKERFILE_NAME:
         required: false
@@ -60,7 +63,9 @@ jobs:
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . ${{ secrets.BUILD_ARG }}
+            ${{ inputs.BUILD_ARGS }} \
+            ${{ secrets.BUILD_ARG }} \
+            .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
