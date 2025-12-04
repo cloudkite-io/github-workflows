@@ -60,7 +60,9 @@ jobs:
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . ${{ secrets.BUILD_ARG }}
+            ${{ inputs.BUILD_ARGS }} \
+            ${{ secrets.BUILD_ARG }} \
+            .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
