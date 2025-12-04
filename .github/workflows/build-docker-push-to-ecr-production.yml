@@ -15,6 +15,13 @@ on:
       AWS_ROLE_NAME:
         required: true
         type: string
+      BUILD_ARGS:
+        required: false
+        type: string
+      BUILD_SECRETS:
+        required: false
+        type: string
+        description: "Docker build secret flags, e.g., --secret id=TOKEN1,env=SECRET1 --secret id=TOKEN2,env=SECRET2"
       DOCKERFILE_NAME:
         required: false
         type: string
@@ -31,10 +38,6 @@ on:
         required: false
         type: boolean
         default: true
-
-    secrets:
-      BUILD_ARG:
-        required: false
 
 jobs:
   docker:
@@ -61,7 +64,7 @@ jobs:
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
             ${{ inputs.BUILD_ARGS }} \
-            ${{ secrets.BUILD_ARG }} \
+            ${{ inputs.BUILD_SECRETS }} \
             .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
