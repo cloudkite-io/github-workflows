@@ -37,6 +37,11 @@ on:
       BUILD_ARG:
         required: false
         type: string
+      SOURCE_BRANCH:
+        description: 'Branch the tag was created from `git branch -r --contains TAG`'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   docker:
@@ -57,7 +62,7 @@ jobs:
         run: |
           az acr login --name ${{ inputs.ACR_NAME }}
       - name: Build and push container image
-        if: ${{ (inputs.ENVIRONMENT != 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true')) || (inputs.RETAG == false || inputs.RETAG == 'false') }}
+        if: ${{ (inputs.ENVIRONMENT != 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true')) || (inputs.RETAG == false || inputs.RETAG == 'false') || (inputs.ENVIRONMENT == 'prod' && inputs.SOURCE_BRANCH != 'main' && inputs.SOURCE_BRANCH != 'refs/heads/main' && inputs.SOURCE_BRANCH != '') }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
