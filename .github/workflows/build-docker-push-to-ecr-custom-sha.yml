@@ -15,6 +15,13 @@ on:
       AWS_ROLE_NAME:
         required: true
         type: string
+      BUILD_ARGS:
+        required: false
+        type: string
+      BUILD_SECRETS:
+        required: false
+        type: string
+        description: "Docker BuildKit secret flags, e.g., --secret id=MY_TOKEN,env=BUILD_SECRET_1 --secret id=OTHER,env=BUILD_SECRET_2"
       DOCKERFILE_NAME:
         required: false
         type: string
@@ -37,8 +44,15 @@ on:
         default: ""
 
     secrets:
-      BUILD_ARG:
+      BUILD_SECRET_1:
         required: false
+        description: "Secret value exposed as BUILD_SECRET_1 env var for docker build --secret"
+      BUILD_SECRET_2:
+        required: false
+        description: "Secret value exposed as BUILD_SECRET_2 env var for docker build --secret"
+      BUILD_SECRET_3:
+        required: false
+        description: "Secret value exposed as BUILD_SECRET_3 env var for docker build --secret"
 
 jobs:
   docker:
@@ -61,10 +75,17 @@ jobs:
       - name: Build and push container image
         if: ${{ (inputs.ENVIRONMENT != 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true')) || (inputs.RETAG == false || inputs.RETAG == 'false') }}
         working-directory: ${{ inputs.DOCKERFILE_PATH }}
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILD_SECRET_1: ${{ secrets.BUILD_SECRET_1 }}
+          BUILD_SECRET_2: ${{ secrets.BUILD_SECRET_2 }}
+          BUILD_SECRET_3: ${{ secrets.BUILD_SECRET_3 }}
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ inputs.RELEVANT_SHA || github.sha }} \
-            . ${{ secrets.BUILD_ARG }}
+            ${{ inputs.BUILD_ARGS }} \
+            ${{ inputs.BUILD_SECRETS }} \
+            .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
