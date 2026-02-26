@@ -35,6 +35,6 @@ jobs:
       - name: Upload SDL as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: schema_graphl
+          name: schema_graphql_generate
           path: ./schema.graphql
           retention-days: 2
