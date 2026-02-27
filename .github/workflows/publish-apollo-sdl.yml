@@ -26,7 +26,7 @@ jobs:
         id: pull_sdl
         uses: actions/download-artifact@v4
         with:
-          name: schema_graphl
+          name: schema_graphql_generate
           path: ./
 
       - name: Install Rover
