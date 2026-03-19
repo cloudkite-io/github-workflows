@@ -26,8 +26,7 @@ on:
         description: >
           Path to the argo-apps chart directory (e.g.
           kubernetes/helm/infrastructure-charts/argo-apps). When set, image tags are
-          written to <path>/<ENVIRONMENT>-apps.values.yaml instead of per-app files,
-          and argo-apps wave ordering is enforced on every deploy.
+          written to <path>/<ENVIRONMENT>-apps.values.yaml instead of per-app files.
       INFRA_REPO:
         required: true
         type: string
@@ -63,6 +62,18 @@ jobs:
           repository: ${{ inputs.INFRA_REPO }}
           ssh-key: ${{ secrets.INFRA_SSH_KEY }}
           ref: ${{ inputs.INFRA_REPO_BRANCH }}
+
+      - name: Validate inputs
+        run: |
+          if [[ -z "${{ inputs.ARGO_APPS_VALUES_PATH }}" && -z "${{ inputs.HELM_CHART_PATH }}" ]]; then
+            echo "Error: HELM_CHART_PATH is required when ARGO_APPS_VALUES_PATH is not set."
+            exit 1
+          fi
+          if [[ -n "${{ inputs.ARGO_APPS_VALUES_PATH }}" && -n "${{ inputs.APPLICATION_NAME }}" && -z "${{ inputs.APPLICATIONS_LIST }}" ]]; then
+            echo "Error: ARGO_APPS_VALUES_PATH is set for a single-application deploy (APPLICATION_NAME provided) but APPLICATIONS_LIST is empty."
+            echo "This workflow currently supports argo-apps mode only when APPLICATIONS_LIST is provided."
+            exit 1
+          fi
 
       - name: Set new tag
         if: ${{ inputs.APPLICATION_NAME != '' && inputs.APPLICATIONS_LIST == '' && inputs.ARGO_APPS_VALUES_PATH == '' }}
@@ -102,6 +113,10 @@ jobs:
           for app in "${apps[@]}"; do
             app_name="${{ inputs.APPLICATIONS_PREFIX }}-${app}"
             echo "Setting tag for app: $app_name"
+            if ! yq e ".apps[] | select(.name == \"$app_name\") | .name" "$values_file" | grep -q .; then
+              echo "Error: app '$app_name' not found in $values_file"
+              exit 1
+            fi
             yq -i "(.apps[] | select(.name == \"$app_name\") | .helmValues.standard-app.tag) = \"$GITHUB_SHA\"" "$values_file"
           done
 
@@ -130,6 +145,10 @@ jobs:
           git config user.name ${{ env.COMMIT_AUTHOR_NAME }}
           git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
           git add .
+          if git diff --cached --quiet; then
+            echo "No staged changes detected; skipping git commit and push."
+            exit 0
+          fi
           git commit -m "Deploy $GITHUB_SHA
           Author: ${{ env.COMMIT_AUTHOR }}"
           git push origin ${{ inputs.INFRA_REPO_BRANCH }}
