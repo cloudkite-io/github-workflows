@@ -1,4 +1,5 @@
-# Use APPLICATION_NAME if you have a single image tag to commit, or APPLICATIONS_LIST if multiple
+# Use APPLICATION_NAME if you have a single image tag to commit, or APPLICATIONS_LIST if multiple.
+# Use ARGO_APPS_VALUES_PATH to write tags into the centralised argo-apps values file instead of per-app files.
 name: Deploy
 
 on:
@@ -17,8 +18,15 @@ on:
         required: true
         type: string
       HELM_CHART_PATH:
-        required: true
+        required: false
         type: string
+      ARGO_APPS_VALUES_PATH:
+        required: false
+        type: string
+        description: >
+          Path to the argo-apps chart directory (e.g.
+          kubernetes/helm/infrastructure-charts/argo-apps). When set, image tags are
+          written to <path>/<ENVIRONMENT>-apps.values.yaml instead of per-app files.
       INFRA_REPO:
         required: true
         type: string
@@ -47,7 +55,7 @@ jobs:
           echo "COMMIT_AUTHOR_NAME=$(git log --format='%an <%ae>' -n 1 HEAD | cut -d '<' -f 2 | cut -d '@' -f 1)" >> $GITHUB_ENV
           echo "COMMIT_AUTHOR_EMAIL=$(git log --format='%an <%ae>' -n 1 HEAD | cut -d '<' -f 2 | cut -d '>' -f 1)" >> $GITHUB_ENV
           echo "COMMIT_AUTHOR=$(git log --format='%an <%ae>' -n 1 HEAD)" >> $GITHUB_ENV
-      
+
       - name: Infrastructure repo checkout
         uses: actions/checkout@v4
         with:
@@ -55,13 +63,25 @@ jobs:
           ssh-key: ${{ secrets.INFRA_SSH_KEY }}
           ref: ${{ inputs.INFRA_REPO_BRANCH }}
 
+      - name: Validate inputs
+        run: |
+          if [[ -z "${{ inputs.ARGO_APPS_VALUES_PATH }}" && -z "${{ inputs.HELM_CHART_PATH }}" ]]; then
+            echo "Error: HELM_CHART_PATH is required when ARGO_APPS_VALUES_PATH is not set."
+            exit 1
+          fi
+          if [[ -n "${{ inputs.ARGO_APPS_VALUES_PATH }}" && -n "${{ inputs.APPLICATION_NAME }}" && -z "${{ inputs.APPLICATIONS_LIST }}" ]]; then
+            echo "Error: ARGO_APPS_VALUES_PATH is set for a single-application deploy (APPLICATION_NAME provided) but APPLICATIONS_LIST is empty."
+            echo "This workflow currently supports argo-apps mode only when APPLICATIONS_LIST is provided."
+            exit 1
+          fi
+
       - name: Set new tag
-        if: ${{ inputs.APPLICATION_NAME != '' && inputs.APPLICATIONS_LIST == '' }}
+        if: ${{ inputs.APPLICATION_NAME != '' && inputs.APPLICATIONS_LIST == '' && inputs.ARGO_APPS_VALUES_PATH == '' }}
         run: |
            yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATION_NAME }}/${{ inputs.ENVIRONMENT }}.values.yaml
 
       - name: Set new tags
-        if: ${{ inputs.APPLICATION_NAME == '' && inputs.APPLICATIONS_LIST != '' }}
+        if: ${{ inputs.APPLICATION_NAME == '' && inputs.APPLICATIONS_LIST != '' && inputs.ARGO_APPS_VALUES_PATH == '' }}
         run: |
           input=${{ inputs.APPLICATIONS_LIST }}
           input="${input#[}"
@@ -77,6 +97,27 @@ jobs:
           for app in "${apps[@]}"; do
             echo "Setting tag for app: $app"
             yq -i ".standard-app.tag = \"$GITHUB_SHA\"" ${{ inputs.HELM_CHART_PATH }}/${{ inputs.APPLICATIONS_PREFIX }}-$app/${{ inputs.ENVIRONMENT }}.values.yaml
+          done
+
+      - name: Set new tags (argo-apps mode)
+        if: ${{ inputs.ARGO_APPS_VALUES_PATH != '' && inputs.APPLICATIONS_LIST != '' }}
+        run: |
+          input=${{ inputs.APPLICATIONS_LIST }}
+          input="${input#[}"
+          input="${input%]}"
+
+          IFS=','
+          read -ra apps <<< "$input"
+          values_file="${{ inputs.ARGO_APPS_VALUES_PATH }}/${{ inputs.ENVIRONMENT }}-apps.values.yaml"
+
+          for app in "${apps[@]}"; do
+            app_name="${{ inputs.APPLICATIONS_PREFIX }}-${app}"
+            echo "Setting tag for app: $app_name"
+            if ! yq e ".apps[] | select(.name == \"$app_name\") | .name" "$values_file" | grep -q .; then
+              echo "Error: app '$app_name' not found in $values_file"
+              exit 1
+            fi
+            yq -i "(.apps[] | select(.name == \"$app_name\") | .helmValues.standard-app.tag) = \"$GITHUB_SHA\"" "$values_file"
           done
 
       # This is an optional step to update envs during deploy. For now this is used by Conduithealth to update API_VERSION env with the deployed commit SHA
@@ -101,9 +142,13 @@ jobs:
       - name: Commit and push
         shell: bash
         run: |-
-          git config user.name ${{ env.COMMIT_AUTHOR_NAME }}  
+          git config user.name ${{ env.COMMIT_AUTHOR_NAME }}
           git config user.email ${{ env.COMMIT_AUTHOR_EMAIL }}
           git add .
+          if git diff --cached --quiet; then
+            echo "No staged changes detected; skipping git commit and push."
+            exit 0
+          fi
           git commit -m "Deploy $GITHUB_SHA
           Author: ${{ env.COMMIT_AUTHOR }}"
           git push origin ${{ inputs.INFRA_REPO_BRANCH }}
