@@ -42,7 +42,10 @@ on:
         required: false
         default: ''
         type: string
-
+    secrets:
+      BUILD_ARGS:
+        required: false
+      
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -67,7 +70,9 @@ jobs:
         run: |
           docker build -f ${{ inputs.DOCKERFILE_NAME }} \
             -t ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA \
-            . ${{ inputs.BUILD_ARG }}
+            ${{ inputs.BUILD_ARG }} \
+            ${{ secrets.BUILD_ARGS }} \
+            .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
         if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
