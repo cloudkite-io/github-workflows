@@ -3,8 +3,8 @@ name: Build and push Docker image to GAR
 on:
   workflow_call:
     inputs:
-      GCP_PROJECT:
-        description: Google Cloud project used for authentication and GAR access.
+      GAR_GCP_PROJECT:
+        description: Google Cloud project that hosts the GAR repository.
         required: true
         type: string
       GAR_REPO_DOMAIN:
@@ -79,14 +79,14 @@ jobs:
           BUILD_ARGS_JSON: ${{ inputs.BUILD_ARGS }}
           GAR_REPO_DOMAIN: ${{ inputs.GAR_REPO_DOMAIN }}
           GAR_REPO_PATH: ${{ inputs.GAR_REPO_PATH }}
-          GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
+          GAR_GCP_PROJECT: ${{ inputs.GAR_GCP_PROJECT }}
           PLATFORM: ${{ inputs.PLATFORM }}
           SERVICE_ACCOUNT: ${{ inputs.SERVICE_ACCOUNT }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.WORKLOAD_IDENTITY_PROVIDER }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$GCP_PROJECT" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
+          [[ "$GAR_GCP_PROJECT" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
           [[ "$GAR_REPO_DOMAIN" =~ ^[a-z0-9-]+-docker\.pkg\.dev$ ]]
           [[ "$GAR_REPO_PATH" =~ ^[a-z0-9][a-z0-9._/-]*$ ]]
           [[ "$PLATFORM" =~ ^linux/[a-z0-9_+-]+$ ]]
@@ -132,7 +132,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v2.1.7
         with:
-          project_id: ${{ inputs.GCP_PROJECT }}
+          project_id: ${{ inputs.GAR_GCP_PROJECT }}
           workload_identity_provider: ${{ inputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ inputs.SERVICE_ACCOUNT }}
 
