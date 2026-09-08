@@ -108,7 +108,10 @@ jobs:
         id: build
         env:
           BUILD_ARGS_JSON: ${{ inputs.BUILD_ARGS }}
-          DOCKER_CONTEXT: ${{ inputs.DOCKER_CONTEXT }}
+          # NOTE: this must NOT be named DOCKER_CONTEXT. That is a reserved Docker CLI
+          # variable that selects the docker context (i.e. the builder), not the build
+          # context path, so setting it to "." fails with: no builder "." found
+          BUILD_CONTEXT_PATH: ${{ inputs.DOCKER_CONTEXT }}
           DOCKERFILE_PATH: ${{ inputs.DOCKERFILE_PATH }}
           GAR_REPO_DOMAIN: ${{ inputs.GAR_REPO_DOMAIN }}
           GAR_REPO_PATH: ${{ inputs.GAR_REPO_PATH }}
@@ -126,7 +129,7 @@ jobs:
             --file "$DOCKERFILE_PATH" \
             --tag "$IMAGE_TAG_URI" \
             "${docker_build_args[@]}" \
-            "$DOCKER_CONTEXT"
+            "$BUILD_CONTEXT_PATH"
           printf 'image_tag_uri=%s\n' "$IMAGE_TAG_URI" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to Google Cloud
