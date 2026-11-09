@@ -76,7 +76,7 @@ jobs:
             .
           docker push -a ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}
       - name: Retag and push container image
-        if: ${{ inputs.ENVIRONMENT == 'prod' && (inputs.RETAG == true || inputs.RETAG == 'true') }}
+        if: ${{ (inputs.ENVIRONMENT == 'prod' || inputs.ENVIRONMENT == 'production') && (inputs.RETAG == true || inputs.RETAG == 'true') }}
         run: |
           docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA
           docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:$GITHUB_SHA ${{ inputs.REGISTRY_URL }}/${{ inputs.APPLICATION_NAME }}:${{ github.ref_name }}
